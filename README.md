@@ -223,6 +223,21 @@ CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
   --geodesic-kde-radius-scales 3.0
 ```
 
+Для sweep только одного участника:
+
+```bash
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
+  --device cuda:0 \
+  --output-root /home/ubu/Documents/GAZE/test1/sweeps/Aquarium_Deep_Sea_Diver_v1_L1_p29065 \
+  --participant-ids 29065 \
+  --smoothing-modes geodesic_kde \
+  --frame-alignments nearest \
+  --point-weight-modes unit \
+  --geodesic-kde-sigma-scales 1.0 2.0 3.0 4.0 6.0 \
+  --geodesic-kde-radius-scales 1.5 2.0 2.5 3.0
+```
+
 ## Ручной перенос на `ubunt` через `git clone` + `rsync`
 
 Если нужно именно клонировать репозиторий и отдельно перенести данные:

@@ -55,6 +55,7 @@ def main() -> None:
     parser.add_argument("--smoothing-alphas", nargs="+", type=float, default=[0.3, 0.5, 0.7])
     parser.add_argument("--geodesic-kde-sigma-scales", nargs="+", type=float, default=[1.0, 2.0, 4.0])
     parser.add_argument("--geodesic-kde-radius-scales", nargs="+", type=float, default=[3.0])
+    parser.add_argument("--participant-ids", nargs="+", type=int, default=None)
     parser.add_argument("--ray-batch-size", type=int, default=128)
     parser.add_argument("--precompute-all-frames", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--resume", action=argparse.BooleanOptionalAction, default=True)
@@ -182,6 +183,8 @@ def main() -> None:
                 cmd += ["--json-dir", str(args.json_dir)]
             if args.gt_dir is not None:
                 cmd += ["--gt-dir", str(args.gt_dir)]
+            if args.participant_ids is not None:
+                cmd += ["--participant-ids", *[str(value) for value in args.participant_ids]]
 
             print(f"\n=== {run_name} ===")
             completed = subprocess.run(cmd, check=False)
@@ -197,6 +200,7 @@ def main() -> None:
                         "smoothing_alpha": smoothing_alpha,
                         "geodesic_kde_sigma_scale": sigma_scale,
                         "geodesic_kde_radius_scale": radius_scale,
+                        "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
                     }
                 )
                 continue
@@ -216,6 +220,7 @@ def main() -> None:
                 "smoothing_alpha": smoothing_alpha,
                 "geodesic_kde_sigma_scale": sigma_scale,
                 "geodesic_kde_radius_scale": radius_scale if smoothing_mode == "geodesic_kde" else None,
+                "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
                 "hit_rate": summary["global_hit_rate"],
                 "points_used_total": summary["points_used_total"],
                 "hits_total": summary["hits_total"],

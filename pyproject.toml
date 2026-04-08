@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meshmamba-gaze"
+version = "0.1.0"
+description = "Face-level gaze projection pipeline for MeshMamba non-textured meshes"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0",
+  "pandas>=2.0",
+]
+
+[tool.setuptools]
+packages = ["mamba_gaze"]

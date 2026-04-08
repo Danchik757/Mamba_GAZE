@@ -14,6 +14,11 @@
 - сохраняет итоговую карту в формате `one value per line`, совместимом с GT MeshMamba;
 - считает метрики против GT.
 
+Режимы сглаживания:
+- `diffusion`: итеративное усреднение по графу соседних граней;
+- `geodesic_kde`: гауссово KDE по графовым геодезическим расстояниям между центроидами соседних граней;
+- `none`: без сглаживания.
+
 Ключевые договоренности для этой версии:
 - используется `face-level`, потому что GT MeshMamba задан по граням;
 - используются **все gaze-точки**, без отдельной детекции фиксаций;
@@ -62,8 +67,20 @@ git push -u origin codex/mamba-gaze-init
 python run_meshmamba_gaze.py \
   --model Aquarium_Deep_Sea_Diver_v1_L1 \
   --device auto \
+  --smoothing-mode diffusion \
   --smoothing-steps 8 \
   --smoothing-alpha 0.6
+```
+
+Пример `geodesic_kde`:
+
+```bash
+python run_meshmamba_gaze.py \
+  --model Aquarium_Deep_Sea_Diver_v1_L1 \
+  --device auto \
+  --smoothing-mode geodesic_kde \
+  --geodesic-kde-sigma-scale 2.0 \
+  --geodesic-kde-radius-scale 3.0
 ```
 
 Результаты будут в:
@@ -182,6 +199,19 @@ CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_De
 ```bash
 cd /home/ubu/Documents/GAZE/test1
 CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh --device cpu
+```
+
+Для sweep `geodesic_kde`:
+
+```bash
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
+  --device cuda:0 \
+  --smoothing-modes geodesic_kde \
+  --frame-alignments nearest floor \
+  --point-weight-modes unit delta_t \
+  --geodesic-kde-sigma-scales 0.5 1.0 2.0 4.0 8.0 \
+  --geodesic-kde-radius-scale 3.0
 ```
 
 ## Ручной перенос на `ubunt` через `git clone` + `rsync`

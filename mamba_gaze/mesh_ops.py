@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import heapq
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Literal
@@ -13,9 +15,13 @@ class FaceAdjacency:
     src: torch.Tensor
     dst: torch.Tensor
     degree: torch.Tensor
+    edge_lengths: torch.Tensor
+    mean_edge_length: float
+    neighbors: tuple[tuple[int, ...], ...]
+    neighbor_lengths: tuple[tuple[float, ...], ...]
 
 
-def build_face_adjacency(faces: np.ndarray, device: torch.device) -> FaceAdjacency:
+def build_face_adjacency(vertices: np.ndarray, faces: np.ndarray, device: torch.device) -> FaceAdjacency:
     edge_to_faces: dict[tuple[int, int], list[int]] = defaultdict(list)
     for face_index, face in enumerate(faces):
         a, b, c = int(face[0]), int(face[1]), int(face[2])
@@ -42,16 +48,51 @@ def build_face_adjacency(faces: np.ndarray, device: torch.device) -> FaceAdjacen
     if not pairs:
         num_faces = int(faces.shape[0])
         empty_long = torch.empty(0, dtype=torch.long, device=device)
+        empty_float = torch.empty(0, dtype=torch.float32, device=device)
         degree = torch.zeros(num_faces, dtype=torch.float32, device=device)
-        return FaceAdjacency(src=empty_long, dst=empty_long, degree=degree)
+        neighbors = tuple(() for _ in range(num_faces))
+        neighbor_lengths = tuple(() for _ in range(num_faces))
+        return FaceAdjacency(
+            src=empty_long,
+            dst=empty_long,
+            degree=degree,
+            edge_lengths=empty_float,
+            mean_edge_length=0.0,
+            neighbors=neighbors,
+            neighbor_lengths=neighbor_lengths,
+        )
 
-    src = torch.tensor([pair[0] for pair in sorted(pairs)], dtype=torch.long, device=device)
-    dst = torch.tensor([pair[1] for pair in sorted(pairs)], dtype=torch.long, device=device)
+    centroids = vertices[faces].mean(axis=1).astype(np.float64)
+    sorted_pairs = sorted(pairs)
+    pair_lengths: list[float] = []
+    neighbors: list[list[int]] = [[] for _ in range(int(faces.shape[0]))]
+    neighbor_lengths: list[list[float]] = [[] for _ in range(int(faces.shape[0]))]
+
+    for first, second in sorted_pairs:
+        distance = float(np.linalg.norm(centroids[first] - centroids[second]))
+        pair_lengths.append(distance)
+        neighbors[first].append(second)
+        neighbors[second].append(first)
+        neighbor_lengths[first].append(distance)
+        neighbor_lengths[second].append(distance)
+
+    src = torch.tensor([pair[0] for pair in sorted_pairs], dtype=torch.long, device=device)
+    dst = torch.tensor([pair[1] for pair in sorted_pairs], dtype=torch.long, device=device)
+    edge_lengths = torch.tensor(pair_lengths, dtype=torch.float32, device=device)
     degree = torch.zeros(int(faces.shape[0]), dtype=torch.float32, device=device)
     ones = torch.ones(src.shape[0], dtype=torch.float32, device=device)
     degree.index_add_(0, src, ones)
     degree.index_add_(0, dst, ones)
-    return FaceAdjacency(src=src, dst=dst, degree=degree)
+    mean_edge_length = float(np.mean(pair_lengths)) if pair_lengths else 0.0
+    return FaceAdjacency(
+        src=src,
+        dst=dst,
+        degree=degree,
+        edge_lengths=edge_lengths,
+        mean_edge_length=mean_edge_length,
+        neighbors=tuple(tuple(item) for item in neighbors),
+        neighbor_lengths=tuple(tuple(item) for item in neighbor_lengths),
+    )
 
 
 def frame_indices_from_timestamps(
@@ -205,6 +246,79 @@ def diffuse_face_values(
         neighbor_avg = neighbor_sum / adjacency.degree.clamp_min(1.0)
         current = (1.0 - alpha) * current + alpha * neighbor_avg
     return current
+
+
+def _truncated_geodesic_distances(
+    source_face: int,
+    adjacency: FaceAdjacency,
+    max_distance: float,
+) -> dict[int, float]:
+    queue: list[tuple[float, int]] = [(0.0, int(source_face))]
+    best = {int(source_face): 0.0}
+
+    while queue:
+        current_distance, current_face = heapq.heappop(queue)
+        if current_distance > max_distance:
+            break
+        if current_distance > best.get(current_face, math.inf):
+            continue
+
+        neighbor_ids = adjacency.neighbors[current_face]
+        neighbor_costs = adjacency.neighbor_lengths[current_face]
+        for neighbor_face, edge_length in zip(neighbor_ids, neighbor_costs):
+            next_distance = current_distance + edge_length
+            if next_distance > max_distance:
+                continue
+            if next_distance >= best.get(neighbor_face, math.inf):
+                continue
+            best[neighbor_face] = next_distance
+            heapq.heappush(queue, (next_distance, neighbor_face))
+
+    return best
+
+
+def geodesic_gaussian_face_kde(
+    face_values: torch.Tensor,
+    adjacency: FaceAdjacency,
+    sigma: float,
+    radius_scale: float = 3.0,
+) -> torch.Tensor:
+    if sigma <= 0.0 or adjacency.mean_edge_length <= 0.0:
+        return face_values.clone()
+
+    face_values_np = face_values.detach().cpu().numpy().astype(np.float64, copy=False)
+    source_faces = np.flatnonzero(face_values_np > 0.0)
+    if source_faces.size == 0:
+        return face_values.clone()
+
+    max_distance = float(max(0.0, radius_scale) * sigma)
+    if max_distance <= 0.0:
+        max_distance = sigma
+
+    sigma_sq_inv = 1.0 / max(sigma * sigma, 1e-12)
+    smoothed = np.zeros_like(face_values_np, dtype=np.float64)
+
+    for source_face in source_faces.tolist():
+        source_weight = float(face_values_np[source_face])
+        if source_weight <= 0.0:
+            continue
+
+        visited = _truncated_geodesic_distances(source_face=source_face, adjacency=adjacency, max_distance=max_distance)
+        if not visited:
+            smoothed[source_face] += source_weight
+            continue
+
+        visited_faces = np.fromiter(visited.keys(), dtype=np.int64)
+        visited_distances = np.fromiter(visited.values(), dtype=np.float64)
+        kernel = np.exp(-0.5 * visited_distances * visited_distances * sigma_sq_inv)
+        kernel_sum = float(kernel.sum())
+        if kernel_sum <= 0.0:
+            smoothed[source_face] += source_weight
+            continue
+
+        smoothed[visited_faces] += source_weight * (kernel / kernel_sum)
+
+    return torch.tensor(smoothed, dtype=face_values.dtype, device=face_values.device)
 
 
 def normalize_sum_tensor(values: torch.Tensor) -> torch.Tensor:

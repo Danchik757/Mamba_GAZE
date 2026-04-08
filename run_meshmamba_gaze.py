@@ -24,8 +24,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--frame-alignment", choices=["nearest", "floor"], default="nearest")
     parser.add_argument("--point-weight-mode", choices=["unit", "delta_t"], default="unit")
     parser.add_argument("--ray-batch-size", type=int, default=64)
+    parser.add_argument("--smoothing-mode", choices=["none", "diffusion", "geodesic_kde"], default="diffusion")
     parser.add_argument("--smoothing-steps", type=int, default=8)
     parser.add_argument("--smoothing-alpha", type=float, default=0.6)
+    parser.add_argument(
+        "--geodesic-kde-sigma-scale",
+        type=float,
+        default=3.0,
+        help="sigma = scale * mean face-adjacency edge length",
+    )
+    parser.add_argument(
+        "--geodesic-kde-radius-scale",
+        type=float,
+        default=3.0,
+        help="truncate geodesic Gaussian KDE at radius_scale * sigma",
+    )
     parser.add_argument("--max-participants", type=int, default=None)
     parser.add_argument("--max-points-per-participant", type=int, default=None)
     parser.add_argument(
@@ -67,8 +80,11 @@ def main() -> None:
         frame_alignment=args.frame_alignment,
         point_weight_mode=args.point_weight_mode,
         ray_batch_size=args.ray_batch_size,
+        smoothing_mode=args.smoothing_mode,
         smoothing_steps=args.smoothing_steps,
         smoothing_alpha=args.smoothing_alpha,
+        geodesic_kde_sigma_scale=args.geodesic_kde_sigma_scale,
+        geodesic_kde_radius_scale=args.geodesic_kde_radius_scale,
         max_participants=args.max_participants,
         max_points_per_participant=args.max_points_per_participant,
         save_participant_maps=args.save_participant_maps,

@@ -27,6 +27,7 @@ from .mesh_ops import (
     compute_point_weights,
     diffuse_face_values,
     frame_indices_from_timestamps,
+    geodesic_gaussian_face_kde,
     intersect_rays_with_triangles,
     normalize_minmax_np,
     normalize_sum_np,
@@ -65,8 +66,11 @@ class RuntimeConfig:
     frame_alignment: str = "nearest"
     point_weight_mode: str = "unit"
     ray_batch_size: int = 64
+    smoothing_mode: str = "diffusion"
     smoothing_steps: int = 8
     smoothing_alpha: float = 0.6
+    geodesic_kde_sigma_scale: float = 3.0
+    geodesic_kde_radius_scale: float = 3.0
     max_participants: Optional[int] = None
     max_points_per_participant: Optional[int] = None
     save_participant_maps: bool = True
@@ -164,7 +168,6 @@ class MeshMambaFaceProjector:
 
         vertices_t = torch.tensor(vertices_np, dtype=torch.float32, device=device)
         faces_t = torch.tensor(faces_np, dtype=torch.long, device=device)
-        adjacency = build_face_adjacency(faces_np, device=device)
 
         model_scale = metadata["model_static"]["scale"]
         scale_t = torch.tensor(
@@ -172,6 +175,8 @@ class MeshMambaFaceProjector:
             dtype=torch.float32,
             device=device,
         )
+        scaled_vertices_np = vertices_np * np.asarray(model_scale, dtype=np.float32).reshape(1, 3)
+        adjacency = build_face_adjacency(scaled_vertices_np, faces_np, device=device)
         translation_t = torch.tensor(metadata["model_static"]["location"], dtype=torch.float32, device=device)
         vertex_cache = FrameVertexCache(
             base_vertices=vertices_t,
@@ -250,6 +255,11 @@ class MeshMambaFaceProjector:
 
         total_points = int(participant_summary_df["points_used"].sum()) if not participant_summary_df.empty else 0
         total_hits = int(participant_summary_df["hit_count"].sum()) if not participant_summary_df.empty else 0
+        geodesic_sigma_world = (
+            float(self.config.geodesic_kde_sigma_scale) * float(adjacency.mean_edge_length)
+            if self.config.smoothing_mode == "geodesic_kde"
+            else None
+        )
         run_summary = {
             "model": resolved.requested_model,
             "output_dir": str(output_dir),
@@ -271,13 +281,26 @@ class MeshMambaFaceProjector:
                 "frame_alignment": self.config.frame_alignment,
                 "point_weight_mode": self.config.point_weight_mode,
                 "ray_batch_size": self.config.ray_batch_size,
+                "smoothing_mode": self.config.smoothing_mode,
                 "smoothing_steps": self.config.smoothing_steps,
                 "smoothing_alpha": self.config.smoothing_alpha,
+                "geodesic_kde_sigma_scale": self.config.geodesic_kde_sigma_scale,
+                "geodesic_kde_radius_scale": self.config.geodesic_kde_radius_scale,
+                "geodesic_kde_sigma_world": geodesic_sigma_world,
+                "geodesic_kde_radius_world": (
+                    None
+                    if geodesic_sigma_world is None
+                    else geodesic_sigma_world * float(self.config.geodesic_kde_radius_scale)
+                ),
                 "max_participants": self.config.max_participants,
                 "max_points_per_participant": self.config.max_points_per_participant,
                 "save_participant_maps": self.config.save_participant_maps,
                 "precompute_all_frames": self.config.precompute_all_frames,
                 "proxy_fixation_percentiles": list(self.config.proxy_fixation_percentiles),
+            },
+            "surface_graph": {
+                "mean_face_adjacency_edge_length": adjacency.mean_edge_length,
+                "adjacency_edge_count": int(adjacency.src.shape[0]),
             },
             "runtime_seconds": round(time.time() - started_at, 3),
         }
@@ -375,12 +398,7 @@ class MeshMambaFaceProjector:
                 face_hits.index_add_(0, hit_faces[valid_hits], weights_t[valid_hits])
                 hit_count += int(valid_hits.sum().item())
 
-        smoothed_hits = diffuse_face_values(
-            face_values=face_hits,
-            adjacency=adjacency,
-            steps=self.config.smoothing_steps,
-            alpha=self.config.smoothing_alpha,
-        )
+        smoothed_hits = self._smooth_face_hits(face_hits=face_hits, adjacency=adjacency)
         normalized_map_t = normalize_sum_tensor(smoothed_hits)
 
         raw_hits = face_hits.detach().cpu().numpy().astype(np.float32)
@@ -406,6 +424,26 @@ class MeshMambaFaceProjector:
             "smoothed_map": smoothed_map,
             "normalized_map": normalized_map,
         }
+
+    def _smooth_face_hits(self, face_hits: torch.Tensor, adjacency: FaceAdjacency) -> torch.Tensor:
+        if self.config.smoothing_mode == "none":
+            return face_hits.clone()
+        if self.config.smoothing_mode == "diffusion":
+            return diffuse_face_values(
+                face_values=face_hits,
+                adjacency=adjacency,
+                steps=self.config.smoothing_steps,
+                alpha=self.config.smoothing_alpha,
+            )
+        if self.config.smoothing_mode == "geodesic_kde":
+            sigma = float(self.config.geodesic_kde_sigma_scale) * float(adjacency.mean_edge_length)
+            return geodesic_gaussian_face_kde(
+                face_values=face_hits,
+                adjacency=adjacency,
+                sigma=sigma,
+                radius_scale=self.config.geodesic_kde_radius_scale,
+            )
+        raise ValueError(f"Unsupported smoothing_mode: {self.config.smoothing_mode}")
 
     def _aggregate_participant_maps(self, participant_maps: list[np.ndarray], face_count: int) -> np.ndarray:
         if not participant_maps:

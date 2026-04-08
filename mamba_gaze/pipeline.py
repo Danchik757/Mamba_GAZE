@@ -71,6 +71,7 @@ class RuntimeConfig:
     smoothing_alpha: float = 0.6
     geodesic_kde_sigma_scale: float = 3.0
     geodesic_kde_radius_scale: float = 3.0
+    participant_ids: Optional[tuple[int, ...]] = None
     max_participants: Optional[int] = None
     max_points_per_participant: Optional[int] = None
     save_participant_maps: bool = True
@@ -153,6 +154,13 @@ class MeshMambaFaceProjector:
 
         metadata = load_json(resolved.json_path)
         gaze_df = read_gaze_dataframe(resolved.csv_path)
+        if self.config.participant_ids:
+            participant_ids = {int(value) for value in self.config.participant_ids}
+            gaze_df = gaze_df[gaze_df["participation_id"].astype(int).isin(participant_ids)].copy()
+            if gaze_df.empty:
+                raise ValueError(
+                    f"No rows found for participant_ids={sorted(participant_ids)} in {resolved.csv_path}"
+                )
         if self.config.max_participants is not None:
             gaze_df = gaze_df.head(self.config.max_participants).copy()
 
@@ -291,6 +299,9 @@ class MeshMambaFaceProjector:
                     None
                     if geodesic_sigma_world is None
                     else geodesic_sigma_world * float(self.config.geodesic_kde_radius_scale)
+                ),
+                "participant_ids": (
+                    None if not self.config.participant_ids else [int(value) for value in self.config.participant_ids]
                 ),
                 "max_participants": self.config.max_participants,
                 "max_points_per_participant": self.config.max_points_per_participant,

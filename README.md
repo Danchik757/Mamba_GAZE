@@ -83,6 +83,15 @@ python run_meshmamba_gaze.py \
   --geodesic-kde-radius-scale 3.0
 ```
 
+Пример запуска только для одного участника:
+
+```bash
+python run_meshmamba_gaze.py \
+  --model Aquarium_Deep_Sea_Diver_v1_L1 \
+  --participant-ids 29065 \
+  --device cuda:0
+```
+
 Результаты будут в:
 
 ```text

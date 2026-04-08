@@ -42,6 +42,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-participants", type=int, default=None)
     parser.add_argument("--max-points-per-participant", type=int, default=None)
     parser.add_argument(
+        "--participant-ids",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Optional participation_id filter. If provided, only these participants are processed.",
+    )
+    parser.add_argument(
         "--save-participant-maps",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -85,6 +92,7 @@ def main() -> None:
         smoothing_alpha=args.smoothing_alpha,
         geodesic_kde_sigma_scale=args.geodesic_kde_sigma_scale,
         geodesic_kde_radius_scale=args.geodesic_kde_radius_scale,
+        participant_ids=None if args.participant_ids is None else tuple(args.participant_ids),
         max_participants=args.max_participants,
         max_points_per_participant=args.max_points_per_participant,
         save_participant_maps=args.save_participant_maps,

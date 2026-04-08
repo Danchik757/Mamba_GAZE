@@ -211,7 +211,7 @@ CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
   --frame-alignments nearest floor \
   --point-weight-modes unit delta_t \
   --geodesic-kde-sigma-scales 0.5 1.0 2.0 4.0 8.0 \
-  --geodesic-kde-radius-scale 3.0
+  --geodesic-kde-radius-scales 3.0
 ```
 
 ## Ручной перенос на `ubunt` через `git clone` + `rsync`

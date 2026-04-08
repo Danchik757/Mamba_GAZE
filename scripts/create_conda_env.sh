@@ -14,7 +14,22 @@ fi
 source "${CONFIG_PATH}"
 
 if ! command -v conda >/dev/null 2>&1; then
-  echo "conda is not available in PATH" >&2
+  if [[ -n "${CONDA_ROOT:-}" && -f "${CONDA_ROOT}/etc/profile.d/conda.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "${CONDA_ROOT}/etc/profile.d/conda.sh"
+  elif [[ -f "${HOME}/miniconda3/etc/profile.d/conda.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "${HOME}/miniconda3/etc/profile.d/conda.sh"
+  elif [[ -f "${HOME}/anaconda3/etc/profile.d/conda.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "${HOME}/anaconda3/etc/profile.d/conda.sh"
+  fi
+fi
+
+if ! command -v conda >/dev/null 2>&1; then
+  echo "conda is not available in PATH and no local installation was found." >&2
+  echo "Install Miniconda first, for example:" >&2
+  echo "  bash scripts/install_miniconda_local.sh" >&2
   exit 1
 fi
 

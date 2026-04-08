@@ -13,6 +13,7 @@ REPO_ROOT="${REPO_ROOT}"
 ENV_ROOT="${GAZE_ROOT}/environments"
 ENV_NAME="meshmamba_gaze"
 ENV_PATH="\${ENV_ROOT}/\${ENV_NAME}"
+CONDA_ROOT="${GAZE_ROOT}/miniconda3"
 
 RENDER_ROOT=""
 VIDEOS_DIR=""

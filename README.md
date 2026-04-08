@@ -32,6 +32,7 @@
 - `scripts/run_aquarium_server.sh`: готовый запуск для `Aquarium_Deep_Sea_Diver_v1_L1`.
 - `scripts/build_ubunt_test1_bundle.sh`: локально собирает self-contained `test1` bundle для переноса на другую машину.
 - `scripts/init_test1_local_config.sh`: создает локальный конфиг для self-contained запуска в текущем клоне.
+- `scripts/install_miniconda_local.sh`: ставит `Miniconda` локально в `GAZE/miniconda3`.
 - `environment.server.yml`: минимальная `conda`-спека.
 
 ## Зависимости
@@ -213,6 +214,7 @@ rsync -av /Users/admin/Documents/LAB/SALIENCY_code/GAZE_DATA/datasets/MeshMamba/
 
 ```bash
 cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/install_miniconda_local.sh
 CONFIG_PATH=configs/test1_local.env bash scripts/create_conda_env.sh
 CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_Deep_Sea_Diver_v1_L1 --device cpu --precompute-all-frames
 ```
@@ -221,4 +223,10 @@ CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_De
 
 ```text
 /home/ubu/Documents/GAZE/environments/meshmamba_gaze
+```
+
+А сама локальная установка `Miniconda` будет здесь:
+
+```text
+/home/ubu/Documents/GAZE/miniconda3
 ```

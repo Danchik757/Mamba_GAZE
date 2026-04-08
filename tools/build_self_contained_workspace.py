@@ -84,6 +84,7 @@ def main() -> None:
                 f'ENV_ROOT="{gaze_root / "environments"}"',
                 'ENV_NAME="meshmamba_gaze"',
                 'ENV_PATH="${ENV_ROOT}/${ENV_NAME}"',
+                f'CONDA_ROOT="{gaze_root / "miniconda3"}"',
                 'RENDER_ROOT=""',
                 'VIDEOS_DIR=""',
                 'JSON_DIR="${REPO_ROOT}/data/jsons_for_models/Mamba_non_textured"',

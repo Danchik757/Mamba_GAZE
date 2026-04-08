@@ -111,41 +111,42 @@ python run_meshmamba_gaze.py \
 
 В репозитории уже зашит серверный конфиг `configs/lab_graphicon_server.env` с такими предположениями:
 
-- `REPO_ROOT=/hd2/projects/Rendering/Mamba_1/MAMBA_GAZE`
-- `ENV_ROOT=/hd2/environments`
-- `VIDEOS_DIR=/hd2/projects/Rendering/Mamba_1/non_textured_videos`
-- `JSON_DIR=/hd2/projects/Rendering/Mamba_1/logs/non_mvp_data`
-- `MESH_DIR=/hd2/projects/Rendering/Dataset/MeshMambaSaliency/MeshFile/non_texture`
-- `GT_DIR=/hd2/projects/Rendering/Dataset/MeshMambaSaliency/SaliencyMap/non_texture`
-- `GAZE_CSV_DIR=/hd2/projects/Rendering/Mamba_1/csv_for_models/MeshMamba_non_texture`
+- `REPO_ROOT=/mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE`
+- `ENV_ROOT=/mnt/hd2/29d_kon/environments`
+- `VIDEOS_DIR=/mnt/hd2/29d_kon/projects/Rendering/Mamba_1/non_textured_videos`
+- `JSON_DIR=/mnt/hd2/29d_kon/projects/Rendering/Mamba_1/logs/non_mvp_data`
+- `MESH_DIR=/mnt/hd2/29d_kon/projects/Rendering/Dataset/MeshMambaSaliency/MeshFile/non_texture`
+- `GT_DIR=/mnt/hd2/29d_kon/projects/Rendering/Dataset/MeshMambaSaliency/SaliencyMap/non_texture`
+- `GAZE_CSV_DIR=/mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE/data/csv_for_models/MeshMamba_non_texture`
+- `OUTPUT_DIR=/mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE/run_outputs`
 
 Важно:
-- `GAZE_CSV_DIR` я поставил как рабочее предположение. Если CSV лежат в другом месте, поменяй одну строку в конфиге.
-- Если сервер видит диск не как `/hd2/...`, а как `/mnt/hd2/29d_kon/projects/...`, префикс тоже нужно поправить в конфиге.
+- Репозиторий и входные `CSV` теперь предполагаются в одном каталоге на сервере.
+- Внешними остаются только уже существующие каталоги с `MeshFile`, `SaliencyMap` и `logs/non_mvp_data`.
 
 ### Создание окружения на сервере
 
 ```bash
-cd /hd2/projects/Rendering/Mamba_1/MAMBA_GAZE
+cd /mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE
 bash scripts/create_conda_env.sh
 ```
 
 Это создаст окружение в:
 
 ```text
-/hd2/environments/meshmamba_gaze
+/mnt/hd2/29d_kon/environments/meshmamba_gaze
 ```
 
 ### Запуск Aquarium на сервере
 
 ```bash
-cd /hd2/projects/Rendering/Mamba_1/MAMBA_GAZE
+cd /mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE
 bash scripts/run_aquarium_server.sh --device cuda:0 --precompute-all-frames --ray-batch-size 128
 ```
 
 ### Запуск произвольной модели
 
 ```bash
-cd /hd2/projects/Rendering/Mamba_1/MAMBA_GAZE
+cd /mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE
 bash scripts/run_model_server.sh Aquarium_Deep_Sea_Diver_v1_L1 --device cuda:0
 ```

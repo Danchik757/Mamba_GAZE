@@ -13,6 +13,7 @@ env/
 outputs/
 outputs_smoke/
 run_outputs/
+data/csv_for_models/
 *.log
 *.bundle
 

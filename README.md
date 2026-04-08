@@ -216,3 +216,9 @@ cd /home/ubu/Documents/GAZE/test1
 CONFIG_PATH=configs/test1_local.env bash scripts/create_conda_env.sh
 CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_Deep_Sea_Diver_v1_L1 --device cpu --precompute-all-frames
 ```
+
+В этом режиме `conda`-окружение создается здесь:
+
+```text
+/home/ubu/Documents/GAZE/environments/meshmamba_gaze
+```

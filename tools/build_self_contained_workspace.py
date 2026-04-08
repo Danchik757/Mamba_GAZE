@@ -49,6 +49,7 @@ def main() -> None:
 
     repo_root = args.repo_root.resolve()
     target_dir = args.target_dir.resolve()
+    gaze_root = target_dir.parent
     model = args.model
 
     copy_repo(repo_root, target_dir)
@@ -80,7 +81,7 @@ def main() -> None:
         "\n".join(
             [
                 f'REPO_ROOT="{target_dir}"',
-                f'ENV_ROOT="{target_dir / ".envs"}"',
+                f'ENV_ROOT="{gaze_root / "environments"}"',
                 'ENV_NAME="meshmamba_gaze"',
                 'ENV_PATH="${ENV_ROOT}/${ENV_NAME}"',
                 'RENDER_ROOT=""',

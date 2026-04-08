@@ -21,7 +21,12 @@ fi
 mkdir -p "${ENV_ROOT}"
 
 echo "Creating conda env at: ${ENV_PATH}"
-conda env create -p "${ENV_PATH}" -f "${REPO_ROOT}/environment.server.yml" --force
+if [[ -d "${ENV_PATH}" ]]; then
+  echo "Existing environment detected, removing: ${ENV_PATH}"
+  conda env remove -p "${ENV_PATH}" -y >/dev/null 2>&1 || conda remove -p "${ENV_PATH}" --all -y
+fi
+
+conda env create -p "${ENV_PATH}" -f "${REPO_ROOT}/environment.server.yml"
 
 CONDA_BASE="$(conda info --base)"
 # shellcheck disable=SC1091

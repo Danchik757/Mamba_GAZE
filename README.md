@@ -30,6 +30,7 @@
 - `scripts/create_conda_env.sh`: создание `conda`-окружения на сервере.
 - `scripts/run_model_server.sh`: запуск модели на сервере через конфиг.
 - `scripts/run_aquarium_server.sh`: готовый запуск для `Aquarium_Deep_Sea_Diver_v1_L1`.
+- `scripts/build_ubunt_test1_bundle.sh`: локально собирает self-contained `test1` bundle для переноса на другую машину.
 - `environment.server.yml`: минимальная `conda`-спека.
 
 ## Зависимости
@@ -149,4 +150,34 @@ bash scripts/run_aquarium_server.sh --device cuda:0 --precompute-all-frames --ra
 ```bash
 cd /mnt/hd2/29d_kon/projects/Rendering/MAMBA_GAZE
 bash scripts/run_model_server.sh Aquarium_Deep_Sea_Diver_v1_L1 --device cuda:0
+```
+
+## Self-Contained `test1` для другой машины
+
+Если нужно перенести только одну модель со всеми необходимыми файлами на машину без исходного репозитория и датасета:
+
+```bash
+cd /Users/admin/Documents/LAB/SALIENCY_code/GAZE_DATA/MAMBA_GAZE
+bash scripts/build_ubunt_test1_bundle.sh
+```
+
+По умолчанию это соберет bundle для `Aquarium_Deep_Sea_Diver_v1_L1`:
+- рабочая директория: `/tmp/test1`
+- архив для переноса: `/tmp/Aquarium_Deep_Sea_Diver_v1_L1_test1_bundle.tar.gz`
+
+На новой машине:
+
+```bash
+mkdir -p /home/ubu/Documents/GAZE
+tar -xzf /home/ubu/Documents/GAZE/Aquarium_Deep_Sea_Diver_v1_L1_test1_bundle.tar.gz -C /home/ubu/Documents/GAZE
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/create_conda_env.sh
+CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_Deep_Sea_Diver_v1_L1 --device cpu --precompute-all-frames
+```
+
+Для sweep на новой машине:
+
+```bash
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh --device cpu
 ```

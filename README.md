@@ -31,6 +31,7 @@
 - `scripts/run_model_server.sh`: запуск модели на сервере через конфиг.
 - `scripts/run_aquarium_server.sh`: готовый запуск для `Aquarium_Deep_Sea_Diver_v1_L1`.
 - `scripts/build_ubunt_test1_bundle.sh`: локально собирает self-contained `test1` bundle для переноса на другую машину.
+- `scripts/init_test1_local_config.sh`: создает локальный конфиг для self-contained запуска в текущем клоне.
 - `environment.server.yml`: минимальная `conda`-спека.
 
 ## Зависимости
@@ -180,4 +181,38 @@ CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_De
 ```bash
 cd /home/ubu/Documents/GAZE/test1
 CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh --device cpu
+```
+
+## Ручной перенос на `ubunt` через `git clone` + `rsync`
+
+Если нужно именно клонировать репозиторий и отдельно перенести данные:
+
+На `ubunt`:
+
+```bash
+mkdir -p /home/ubu/Documents/GAZE
+git clone https://github.com/Danchik757/Mamba_GAZE.git /home/ubu/Documents/GAZE/test1
+cd /home/ubu/Documents/GAZE/test1
+bash scripts/init_test1_local_config.sh
+mkdir -p data/csv_for_models/MeshMamba_non_texture
+mkdir -p data/jsons_for_models/Mamba_non_textured
+mkdir -p data/datasets/MeshMamba/MeshMambaSaliency/MeshFile/non_texture/Aquarium_Deep_Sea_Diver_v1_L1
+mkdir -p data/datasets/MeshMamba/MeshMambaSaliency/SaliencyMap/non_texture
+```
+
+С локального компьютера:
+
+```bash
+rsync -av /Users/admin/Documents/LAB/SALIENCY_code/GAZE_DATA/csv_for_models/MeshMamba_non_texture/Aquarium_Deep_Sea_Diver_v1_L1.csv ubu@<HOST>:/home/ubu/Documents/GAZE/test1/data/csv_for_models/MeshMamba_non_texture/
+rsync -av /Users/admin/Documents/LAB/SALIENCY_code/GAZE_DATA/jsons_for_models/Mamba_non_textured/MeshMamba_non_texture_Aquarium_Deep_Sea_Diver_v1_L1.json ubu@<HOST>:/home/ubu/Documents/GAZE/test1/data/jsons_for_models/Mamba_non_textured/
+rsync -av /Users/admin/Documents/LAB/SALIENCY_code/GAZE_DATA/datasets/MeshMamba/MeshMambaSaliency/MeshFile/non_texture/Aquarium_Deep_Sea_Diver_v1_L1/ ubu@<HOST>:/home/ubu/Documents/GAZE/test1/data/datasets/MeshMamba/MeshMambaSaliency/MeshFile/non_texture/Aquarium_Deep_Sea_Diver_v1_L1/
+rsync -av /Users/admin/Documents/LAB/SALIENCY_code/GAZE_DATA/datasets/MeshMamba/MeshMambaSaliency/SaliencyMap/non_texture/Aquarium_Deep_Sea_Diver_v1_L1.csv ubu@<HOST>:/home/ubu/Documents/GAZE/test1/data/datasets/MeshMamba/MeshMambaSaliency/SaliencyMap/non_texture/
+```
+
+Потом на `ubunt`:
+
+```bash
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/create_conda_env.sh
+CONFIG_PATH=configs/test1_local.env bash scripts/run_model_server.sh Aquarium_Deep_Sea_Diver_v1_L1 --device cpu --precompute-all-frames
 ```

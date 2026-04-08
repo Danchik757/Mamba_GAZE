@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CONFIG_PATH="${1:-${REPO_ROOT}/configs/lab_graphicon_server.env}"
+CONFIG_PATH="${CONFIG_PATH:-${1:-${REPO_ROOT}/configs/lab_graphicon_server.env}}"
 
 if [[ ! -f "${CONFIG_PATH}" ]]; then
   echo "Config not found: ${CONFIG_PATH}" >&2

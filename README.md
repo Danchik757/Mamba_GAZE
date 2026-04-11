@@ -38,6 +38,7 @@
 - `scripts/build_ubunt_test1_bundle.sh`: локально собирает self-contained `test1` bundle для переноса на другую машину.
 - `scripts/init_test1_local_config.sh`: создает локальный конфиг для self-contained запуска в текущем клоне.
 - `scripts/install_miniconda_local.sh`: ставит `Miniconda` локально в `GAZE/miniconda3`.
+- `scripts/render_model_preview.sh`: быстрый preview-рендер первого кадра OBJ из той же камеры и трансформации, что использует пайплайн.
 - `environment.server.yml`: минимальная `conda`-спека.
 
 ## Зависимости
@@ -236,6 +237,19 @@ CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
   --point-weight-modes unit \
   --geodesic-kde-sigma-scales 1.0 2.0 3.0 4.0 6.0 \
   --geodesic-kde-radius-scales 1.5 2.0 2.5 3.0
+```
+
+Быстрый preview первого кадра:
+
+```bash
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/render_model_preview.sh Aquarium_Deep_Sea_Diver_v1_L1 --resolution-scale 0.5
+```
+
+По умолчанию файл сохраняется сюда:
+
+```text
+/home/ubu/Documents/GAZE/test1/run_outputs/previews/Aquarium_Deep_Sea_Diver_v1_L1_frame0_preview.ppm
 ```
 
 ## Ручной перенос на `ubunt` через `git clone` + `rsync`

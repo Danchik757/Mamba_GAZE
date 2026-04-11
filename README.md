@@ -246,6 +246,16 @@ cd /home/ubu/Documents/GAZE/test1
 CONFIG_PATH=configs/test1_local.env bash scripts/render_model_preview.sh Aquarium_Deep_Sea_Diver_v1_L1 --resolution-scale 0.5
 ```
 
+С дополнительным поворотом по `X` на `+90°`:
+
+```bash
+cd /home/ubu/Documents/GAZE/test1
+CONFIG_PATH=configs/test1_local.env bash scripts/render_model_preview.sh \
+  Aquarium_Deep_Sea_Diver_v1_L1 \
+  --resolution-scale 0.5 \
+  --extra-rotate-x-deg 90
+```
+
 По умолчанию файл сохраняется сюда:
 
 ```text

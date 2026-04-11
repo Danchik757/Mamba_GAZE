@@ -25,6 +25,17 @@ def rotate_vertices_z(vertices: np.ndarray, angle_radians: float) -> np.ndarray:
     return np.stack([rotated_x, rotated_y, z], axis=1)
 
 
+def rotate_vertices_x(vertices: np.ndarray, angle_radians: float) -> np.ndarray:
+    cos_angle = float(np.cos(angle_radians))
+    sin_angle = float(np.sin(angle_radians))
+    x = vertices[:, 0]
+    y = vertices[:, 1]
+    z = vertices[:, 2]
+    rotated_y = cos_angle * y - sin_angle * z
+    rotated_z = sin_angle * y + cos_angle * z
+    return np.stack([x, rotated_y, rotated_z], axis=1)
+
+
 def write_ppm(path: Path, image: np.ndarray) -> None:
     image = np.asarray(image, dtype=np.uint8)
     ensure_dir(path.parent)
@@ -174,6 +185,7 @@ def main() -> None:
     parser.add_argument("--output-image", type=Path, required=True)
     parser.add_argument("--frame-index", type=int, default=0)
     parser.add_argument("--resolution-scale", type=float, default=0.5)
+    parser.add_argument("--extra-rotate-x-deg", type=float, default=0.0)
     args = parser.parse_args()
 
     mesh_path = args.mesh_dir / args.model / f"{args.model}.obj"
@@ -187,10 +199,15 @@ def main() -> None:
     metadata = load_json(json_path)
     frame_index = int(np.clip(args.frame_index, 0, len(metadata["frames"]) - 1))
     angle = float(metadata["frames"][frame_index]["rotation_z_radians"])
+    extra_rotate_x_deg = float(args.extra_rotate_x_deg)
+    extra_rotate_x_rad = np.deg2rad(extra_rotate_x_deg)
 
     scale = np.asarray(metadata["model_static"]["scale"], dtype=np.float64).reshape(1, 3)
     translation = np.asarray(metadata["model_static"]["location"], dtype=np.float64).reshape(1, 3)
-    vertices_world = rotate_vertices_z(vertices * scale, angle) + translation
+    transformed_vertices = rotate_vertices_z(vertices * scale, angle)
+    if abs(extra_rotate_x_rad) > 1e-12:
+        transformed_vertices = rotate_vertices_x(transformed_vertices, extra_rotate_x_rad)
+    vertices_world = transformed_vertices + translation
 
     view_matrix = np.asarray(metadata["camera_static"]["view_matrix"], dtype=np.float64)
     projection_matrix = np.asarray(metadata["camera_static"]["projection_matrix"], dtype=np.float64)
@@ -220,6 +237,7 @@ def main() -> None:
     print(f"Model: {args.model}")
     print(f"Frame index: {frame_index}")
     print(f"Angle radians: {angle}")
+    print(f"Extra rotate X degrees: {extra_rotate_x_deg}")
     print(f"Image size: {width}x{height}")
     print(f"Camera origin: {camera_origin.tolist()}")
     print(f"Model translation: {translation.reshape(-1).tolist()}")

@@ -73,6 +73,7 @@ class RuntimeConfig:
     geodesic_kde_sigma_scale: float = 3.0
     geodesic_kde_radius_scale: float = 3.0
     extra_rotate_x_deg: float = 0.0
+    recenter_to_bbox_center: bool = False
     participant_ids: Optional[tuple[int, ...]] = None
     max_participants: Optional[int] = None
     max_points_per_participant: Optional[int] = None
@@ -159,6 +160,9 @@ class MeshMambaFaceProjector:
         write_json(output_dir / "resolved_paths.json", resolved.to_jsonable())
 
         vertices_np, faces_np = load_obj(resolved.mesh_path)
+        bbox_center_np = (vertices_np.min(axis=0) + vertices_np.max(axis=0)) * 0.5
+        if self.config.recenter_to_bbox_center:
+            vertices_np = vertices_np - bbox_center_np.reshape(1, 3)
         ground_truth = None if resolved.gt_path is None else load_vector_csv(resolved.gt_path)
         if ground_truth is not None and ground_truth.shape[0] != faces_np.shape[0]:
             raise ValueError(
@@ -309,13 +313,18 @@ class MeshMambaFaceProjector:
                 "geodesic_kde_sigma_scale": self.config.geodesic_kde_sigma_scale,
                 "geodesic_kde_radius_scale": self.config.geodesic_kde_radius_scale,
                 "extra_rotate_x_deg": self.config.extra_rotate_x_deg,
+                "recenter_to_bbox_center": self.config.recenter_to_bbox_center,
                 "geodesic_kde_sigma_world": geodesic_sigma_world,
                 "geodesic_kde_radius_world": (
                     None
                     if geodesic_sigma_world is None
                     else geodesic_sigma_world * float(self.config.geodesic_kde_radius_scale)
                 ),
-                "transform_order": "scale -> frame_rotation_z -> extra_rotation_x -> translation",
+                "transform_order": (
+                    "recenter_to_bbox_center -> scale -> frame_rotation_z -> extra_rotation_x -> translation"
+                    if self.config.recenter_to_bbox_center
+                    else "scale -> frame_rotation_z -> extra_rotation_x -> translation"
+                ),
                 "participant_ids": (
                     None if not self.config.participant_ids else [int(value) for value in self.config.participant_ids]
                 ),
@@ -328,6 +337,7 @@ class MeshMambaFaceProjector:
             "surface_graph": {
                 "mean_face_adjacency_edge_length": adjacency.mean_edge_length,
                 "adjacency_edge_count": int(adjacency.src.shape[0]),
+                "bbox_center_raw_obj": bbox_center_np.astype(float).tolist(),
             },
             "runtime_seconds": round(time.time() - started_at, 3),
         }

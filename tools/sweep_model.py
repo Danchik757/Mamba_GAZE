@@ -24,12 +24,15 @@ def build_run_name(
     geodesic_kde_sigma_scale: float | None = None,
     geodesic_kde_radius_scale: float | None = None,
     extra_rotate_x_deg: float = 0.0,
+    recenter_to_bbox_center: bool = False,
 ) -> str:
     parts = [
         f"fa-{frame_alignment}",
         f"pw-{point_weight_mode}",
         f"sm-{smoothing_mode}",
     ]
+    if recenter_to_bbox_center:
+        parts.append("bbox-center")
     if abs(float(extra_rotate_x_deg)) > 1e-12:
         parts.append(f"rx-{_fmt_float(float(extra_rotate_x_deg))}")
     if smoothing_mode == "diffusion":
@@ -59,6 +62,7 @@ def main() -> None:
     parser.add_argument("--geodesic-kde-sigma-scales", nargs="+", type=float, default=[1.0, 2.0, 4.0])
     parser.add_argument("--geodesic-kde-radius-scales", nargs="+", type=float, default=[3.0])
     parser.add_argument("--extra-rotate-x-deg", type=float, default=0.0)
+    parser.add_argument("--recenter-to-bbox-center", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--participant-ids", nargs="+", type=int, default=None)
     parser.add_argument("--ray-batch-size", type=int, default=128)
     parser.add_argument("--precompute-all-frames", action=argparse.BooleanOptionalAction, default=True)
@@ -137,6 +141,7 @@ def main() -> None:
             geodesic_kde_sigma_scale=None if sigma_scale is None else float(sigma_scale),
             geodesic_kde_radius_scale=None if radius_scale is None else float(radius_scale),
             extra_rotate_x_deg=float(args.extra_rotate_x_deg),
+            recenter_to_bbox_center=bool(args.recenter_to_bbox_center),
         )
         run_root = output_root / run_name
         model_output_dir = run_root / args.model
@@ -181,6 +186,10 @@ def main() -> None:
                 cmd.append("--precompute-all-frames")
             else:
                 cmd.append("--no-precompute-all-frames")
+            if args.recenter_to_bbox_center:
+                cmd.append("--recenter-to-bbox-center")
+            else:
+                cmd.append("--no-recenter-to-bbox-center")
 
             if args.gaze_csv_dir is not None:
                 cmd += ["--gaze-csv-dir", str(args.gaze_csv_dir)]
@@ -209,6 +218,7 @@ def main() -> None:
                         "geodesic_kde_radius_scale": radius_scale,
                         "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
                         "extra_rotate_x_deg": float(args.extra_rotate_x_deg),
+                        "recenter_to_bbox_center": bool(args.recenter_to_bbox_center),
                     }
                 )
                 continue
@@ -230,6 +240,7 @@ def main() -> None:
                 "geodesic_kde_radius_scale": radius_scale if smoothing_mode == "geodesic_kde" else None,
                 "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
                 "extra_rotate_x_deg": float(args.extra_rotate_x_deg),
+                "recenter_to_bbox_center": bool(args.recenter_to_bbox_center),
                 "hit_rate": summary["global_hit_rate"],
                 "points_used_total": summary["points_used_total"],
                 "hits_total": summary["hits_total"],

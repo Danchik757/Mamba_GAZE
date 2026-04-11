@@ -90,6 +90,7 @@ python run_meshmamba_gaze.py \
 python run_meshmamba_gaze.py \
   --model Aquarium_Deep_Sea_Diver_v1_L1 \
   --device cuda:0 \
+  --recenter-to-bbox-center \
   --extra-rotate-x-deg 90
 ```
 
@@ -241,6 +242,7 @@ CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
   --device cuda:0 \
   --output-root /home/ubu/Documents/GAZE/test1/sweeps/Aquarium_Deep_Sea_Diver_v1_L1_p29065 \
   --participant-ids 29065 \
+  --recenter-to-bbox-center \
   --extra-rotate-x-deg 90 \
   --smoothing-modes geodesic_kde \
   --frame-alignments nearest \
@@ -263,6 +265,7 @@ cd /home/ubu/Documents/GAZE/test1
 CONFIG_PATH=configs/test1_local.env bash scripts/render_model_preview.sh \
   Aquarium_Deep_Sea_Diver_v1_L1 \
   --resolution-scale 0.5 \
+  --recenter-to-bbox-center \
   --extra-rotate-x-deg 90
 ```
 

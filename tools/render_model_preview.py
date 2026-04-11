@@ -186,6 +186,7 @@ def main() -> None:
     parser.add_argument("--frame-index", type=int, default=0)
     parser.add_argument("--resolution-scale", type=float, default=0.5)
     parser.add_argument("--extra-rotate-x-deg", type=float, default=0.0)
+    parser.add_argument("--recenter-to-bbox-center", action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
 
     mesh_path = args.mesh_dir / args.model / f"{args.model}.obj"
@@ -196,6 +197,9 @@ def main() -> None:
         raise FileNotFoundError(f"JSON not found: {json_path}")
 
     vertices, faces = load_obj(mesh_path)
+    bbox_center = (vertices.min(axis=0) + vertices.max(axis=0)) * 0.5
+    if args.recenter_to_bbox_center:
+        vertices = vertices - bbox_center.reshape(1, 3)
     metadata = load_json(json_path)
     frame_index = int(np.clip(args.frame_index, 0, len(metadata["frames"]) - 1))
     angle = float(metadata["frames"][frame_index]["rotation_z_radians"])
@@ -242,6 +246,8 @@ def main() -> None:
     print(f"Camera origin: {camera_origin.tolist()}")
     print(f"Model translation: {translation.reshape(-1).tolist()}")
     print(f"Model scale: {scale.reshape(-1).tolist()}")
+    print(f"Recenter to bbox center: {bool(args.recenter_to_bbox_center)}")
+    print(f"Raw OBJ bbox center: {bbox_center.astype(float).tolist()}")
     print(f"Coverage ratio: {stats['coverage_ratio']:.6f}")
     print(
         "Projected bbox: "

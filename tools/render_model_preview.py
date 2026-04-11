@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from mamba_gaze.camera_utils import build_projection_matrix_from_fov_degrees
 from mamba_gaze.io_utils import ensure_dir, load_json, load_obj
 
 
@@ -187,6 +188,7 @@ def main() -> None:
     parser.add_argument("--resolution-scale", type=float, default=0.5)
     parser.add_argument("--extra-rotate-x-deg", type=float, default=0.0)
     parser.add_argument("--recenter-to-bbox-center", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--override-fov-deg", type=float, default=None)
     args = parser.parse_args()
 
     mesh_path = args.mesh_dir / args.model / f"{args.model}.obj"
@@ -214,7 +216,20 @@ def main() -> None:
     vertices_world = transformed_vertices + translation
 
     view_matrix = np.asarray(metadata["camera_static"]["view_matrix"], dtype=np.float64)
-    projection_matrix = np.asarray(metadata["camera_static"]["projection_matrix"], dtype=np.float64)
+    effective_fov_deg = (
+        float(args.override_fov_deg)
+        if args.override_fov_deg is not None
+        else float(metadata["camera_static"]["fov_degrees"])
+    )
+    if args.override_fov_deg is None:
+        projection_matrix = np.asarray(metadata["camera_static"]["projection_matrix"], dtype=np.float64)
+    else:
+        projection_matrix = build_projection_matrix_from_fov_degrees(
+            fov_degrees=effective_fov_deg,
+            aspect_ratio=float(metadata["video_info"]["aspect_ratio"]),
+            clip_start=float(metadata["camera_static"]["clip_start"]),
+            clip_end=float(metadata["camera_static"]["clip_end"]),
+        )
     inv_view = np.linalg.inv(view_matrix)
     camera_origin_h = inv_view @ np.asarray([0.0, 0.0, 0.0, 1.0], dtype=np.float64)
     camera_origin = camera_origin_h[:3] / camera_origin_h[3]
@@ -247,6 +262,7 @@ def main() -> None:
     print(f"Model translation: {translation.reshape(-1).tolist()}")
     print(f"Model scale: {scale.reshape(-1).tolist()}")
     print(f"Recenter to bbox center: {bool(args.recenter_to_bbox_center)}")
+    print(f"Effective FOV degrees: {effective_fov_deg}")
     print(f"Raw OBJ bbox center: {bbox_center.astype(float).tolist()}")
     print(f"Coverage ratio: {stats['coverage_ratio']:.6f}")
     print(

@@ -51,6 +51,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="Recenter OBJ vertices to bounding-box center before scale/rotation/translation, matching Blender origin_set(center='BOUNDS').",
     )
+    parser.add_argument(
+        "--override-fov-deg",
+        type=float,
+        default=None,
+        help="Override camera vertical FOV in degrees while keeping the JSON view matrix.",
+    )
     parser.add_argument("--max-participants", type=int, default=None)
     parser.add_argument("--max-points-per-participant", type=int, default=None)
     parser.add_argument(
@@ -106,6 +112,7 @@ def main() -> None:
         geodesic_kde_radius_scale=args.geodesic_kde_radius_scale,
         extra_rotate_x_deg=args.extra_rotate_x_deg,
         recenter_to_bbox_center=args.recenter_to_bbox_center,
+        override_fov_deg=args.override_fov_deg,
         participant_ids=None if args.participant_ids is None else tuple(args.participant_ids),
         max_participants=args.max_participants,
         max_points_per_participant=args.max_points_per_participant,

@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from .camera_utils import build_projection_matrix_from_fov_degrees
 from .io_utils import (
     ResolvedModelPaths,
     ensure_dir,
@@ -74,6 +75,7 @@ class RuntimeConfig:
     geodesic_kde_radius_scale: float = 3.0
     extra_rotate_x_deg: float = 0.0
     recenter_to_bbox_center: bool = False
+    override_fov_deg: Optional[float] = None
     participant_ids: Optional[tuple[int, ...]] = None
     max_participants: Optional[int] = None
     max_points_per_participant: Optional[int] = None
@@ -213,11 +215,25 @@ class MeshMambaFaceProjector:
         )
 
         view_matrix = torch.tensor(metadata["camera_static"]["view_matrix"], dtype=torch.float32, device=device)
-        projection_matrix = torch.tensor(
-            metadata["camera_static"]["projection_matrix"],
-            dtype=torch.float32,
-            device=device,
+        effective_fov_deg = (
+            float(self.config.override_fov_deg)
+            if self.config.override_fov_deg is not None
+            else float(metadata["camera_static"]["fov_degrees"])
         )
+        if self.config.override_fov_deg is None:
+            projection_matrix = torch.tensor(
+                metadata["camera_static"]["projection_matrix"],
+                dtype=torch.float32,
+                device=device,
+            )
+        else:
+            projection_matrix_np = build_projection_matrix_from_fov_degrees(
+                fov_degrees=effective_fov_deg,
+                aspect_ratio=float(metadata["video_info"]["aspect_ratio"]),
+                clip_start=float(metadata["camera_static"]["clip_start"]),
+                clip_end=float(metadata["camera_static"]["clip_end"]),
+            )
+            projection_matrix = torch.tensor(projection_matrix_np, dtype=torch.float32, device=device)
         inv_view = torch.inverse(view_matrix)
         inv_projection = torch.inverse(projection_matrix)
         camera_origin_h = inv_view @ torch.tensor([0.0, 0.0, 0.0, 1.0], dtype=torch.float32, device=device)
@@ -314,6 +330,8 @@ class MeshMambaFaceProjector:
                 "geodesic_kde_radius_scale": self.config.geodesic_kde_radius_scale,
                 "extra_rotate_x_deg": self.config.extra_rotate_x_deg,
                 "recenter_to_bbox_center": self.config.recenter_to_bbox_center,
+                "override_fov_deg": self.config.override_fov_deg,
+                "effective_fov_deg": effective_fov_deg,
                 "geodesic_kde_sigma_world": geodesic_sigma_world,
                 "geodesic_kde_radius_world": (
                     None

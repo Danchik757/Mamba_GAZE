@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -71,6 +72,7 @@ class RuntimeConfig:
     smoothing_alpha: float = 0.6
     geodesic_kde_sigma_scale: float = 3.0
     geodesic_kde_radius_scale: float = 3.0
+    extra_rotate_x_deg: float = 0.0
     participant_ids: Optional[tuple[int, ...]] = None
     max_participants: Optional[int] = None
     max_points_per_participant: Optional[int] = None
@@ -87,12 +89,16 @@ class FrameVertexCache:
         scale: torch.Tensor,
         translation: torch.Tensor,
         precompute_all: bool,
+        extra_rotate_x_radians: float = 0.0,
     ) -> None:
         self.base_vertices = base_vertices
         self.frame_angles_radians = frame_angles_radians
         self.scale = scale.view(1, 3)
         self.translation = translation.view(1, 3)
         self.scaled_vertices = self.base_vertices * self.scale
+        self.extra_rotate_x_radians = float(extra_rotate_x_radians)
+        self.extra_rotate_x_cos = float(math.cos(self.extra_rotate_x_radians))
+        self.extra_rotate_x_sin = float(math.sin(self.extra_rotate_x_radians))
         self._cache: dict[int, torch.Tensor] = {}
         if precompute_all:
             for index in range(int(frame_angles_radians.shape[0])):
@@ -109,7 +115,14 @@ class FrameVertexCache:
 
         rotated_x = cos_angle * x - sin_angle * y
         rotated_y = sin_angle * x + cos_angle * y
-        rotated = torch.stack([rotated_x, rotated_y, z], dim=1)
+        rotated_z = z
+        if abs(self.extra_rotate_x_radians) > 1e-12:
+            extra_rotated_y = self.extra_rotate_x_cos * rotated_y - self.extra_rotate_x_sin * rotated_z
+            extra_rotated_z = self.extra_rotate_x_sin * rotated_y + self.extra_rotate_x_cos * rotated_z
+            rotated_y = extra_rotated_y
+            rotated_z = extra_rotated_z
+
+        rotated = torch.stack([rotated_x, rotated_y, rotated_z], dim=1)
         return rotated + self.translation
 
     def get(self, frame_index: int) -> torch.Tensor:
@@ -192,6 +205,7 @@ class MeshMambaFaceProjector:
             scale=scale_t,
             translation=translation_t,
             precompute_all=self.config.precompute_all_frames,
+            extra_rotate_x_radians=math.radians(float(self.config.extra_rotate_x_deg)),
         )
 
         view_matrix = torch.tensor(metadata["camera_static"]["view_matrix"], dtype=torch.float32, device=device)
@@ -294,12 +308,14 @@ class MeshMambaFaceProjector:
                 "smoothing_alpha": self.config.smoothing_alpha,
                 "geodesic_kde_sigma_scale": self.config.geodesic_kde_sigma_scale,
                 "geodesic_kde_radius_scale": self.config.geodesic_kde_radius_scale,
+                "extra_rotate_x_deg": self.config.extra_rotate_x_deg,
                 "geodesic_kde_sigma_world": geodesic_sigma_world,
                 "geodesic_kde_radius_world": (
                     None
                     if geodesic_sigma_world is None
                     else geodesic_sigma_world * float(self.config.geodesic_kde_radius_scale)
                 ),
+                "transform_order": "scale -> frame_rotation_z -> extra_rotation_x -> translation",
                 "participant_ids": (
                     None if not self.config.participant_ids else [int(value) for value in self.config.participant_ids]
                 ),

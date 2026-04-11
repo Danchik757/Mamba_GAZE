@@ -84,6 +84,15 @@ python run_meshmamba_gaze.py \
   --geodesic-kde-radius-scale 3.0
 ```
 
+Тот же запуск с дополнительным поворотом объекта по `X` на `+90°`:
+
+```bash
+python run_meshmamba_gaze.py \
+  --model Aquarium_Deep_Sea_Diver_v1_L1 \
+  --device cuda:0 \
+  --extra-rotate-x-deg 90
+```
+
 Пример запуска только для одного участника:
 
 ```bash
@@ -232,6 +241,7 @@ CONFIG_PATH=configs/test1_local.env bash scripts/sweep_aquarium_server.sh \
   --device cuda:0 \
   --output-root /home/ubu/Documents/GAZE/test1/sweeps/Aquarium_Deep_Sea_Diver_v1_L1_p29065 \
   --participant-ids 29065 \
+  --extra-rotate-x-deg 90 \
   --smoothing-modes geodesic_kde \
   --frame-alignments nearest \
   --point-weight-modes unit \

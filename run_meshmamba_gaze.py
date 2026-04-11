@@ -39,6 +39,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=3.0,
         help="truncate geodesic Gaussian KDE at radius_scale * sigma",
     )
+    parser.add_argument(
+        "--extra-rotate-x-deg",
+        type=float,
+        default=0.0,
+        help="Additional rigid rotation around X applied after frame Z rotation and before translation.",
+    )
     parser.add_argument("--max-participants", type=int, default=None)
     parser.add_argument("--max-points-per-participant", type=int, default=None)
     parser.add_argument(
@@ -92,6 +98,7 @@ def main() -> None:
         smoothing_alpha=args.smoothing_alpha,
         geodesic_kde_sigma_scale=args.geodesic_kde_sigma_scale,
         geodesic_kde_radius_scale=args.geodesic_kde_radius_scale,
+        extra_rotate_x_deg=args.extra_rotate_x_deg,
         participant_ids=None if args.participant_ids is None else tuple(args.participant_ids),
         max_participants=args.max_participants,
         max_points_per_participant=args.max_points_per_participant,

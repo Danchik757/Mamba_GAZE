@@ -23,12 +23,15 @@ def build_run_name(
     smoothing_alpha: float | None = None,
     geodesic_kde_sigma_scale: float | None = None,
     geodesic_kde_radius_scale: float | None = None,
+    extra_rotate_x_deg: float = 0.0,
 ) -> str:
     parts = [
         f"fa-{frame_alignment}",
         f"pw-{point_weight_mode}",
         f"sm-{smoothing_mode}",
     ]
+    if abs(float(extra_rotate_x_deg)) > 1e-12:
+        parts.append(f"rx-{_fmt_float(float(extra_rotate_x_deg))}")
     if smoothing_mode == "diffusion":
         parts.append(f"steps-{int(smoothing_steps or 0)}")
         parts.append(f"alpha-{_fmt_float(float(smoothing_alpha or 0.0))}")
@@ -55,6 +58,7 @@ def main() -> None:
     parser.add_argument("--smoothing-alphas", nargs="+", type=float, default=[0.3, 0.5, 0.7])
     parser.add_argument("--geodesic-kde-sigma-scales", nargs="+", type=float, default=[1.0, 2.0, 4.0])
     parser.add_argument("--geodesic-kde-radius-scales", nargs="+", type=float, default=[3.0])
+    parser.add_argument("--extra-rotate-x-deg", type=float, default=0.0)
     parser.add_argument("--participant-ids", nargs="+", type=int, default=None)
     parser.add_argument("--ray-batch-size", type=int, default=128)
     parser.add_argument("--precompute-all-frames", action=argparse.BooleanOptionalAction, default=True)
@@ -132,6 +136,7 @@ def main() -> None:
             smoothing_alpha=None if smoothing_alpha is None else float(smoothing_alpha),
             geodesic_kde_sigma_scale=None if sigma_scale is None else float(sigma_scale),
             geodesic_kde_radius_scale=None if radius_scale is None else float(radius_scale),
+            extra_rotate_x_deg=float(args.extra_rotate_x_deg),
         )
         run_root = output_root / run_name
         model_output_dir = run_root / args.model
@@ -149,6 +154,8 @@ def main() -> None:
                 args.model,
                 "--device",
                 args.device,
+                "--extra-rotate-x-deg",
+                str(float(args.extra_rotate_x_deg)),
                 "--smoothing-mode",
                 smoothing_mode,
                 "--frame-alignment",
@@ -201,6 +208,7 @@ def main() -> None:
                         "geodesic_kde_sigma_scale": sigma_scale,
                         "geodesic_kde_radius_scale": radius_scale,
                         "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
+                        "extra_rotate_x_deg": float(args.extra_rotate_x_deg),
                     }
                 )
                 continue
@@ -221,6 +229,7 @@ def main() -> None:
                 "geodesic_kde_sigma_scale": sigma_scale,
                 "geodesic_kde_radius_scale": radius_scale if smoothing_mode == "geodesic_kde" else None,
                 "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
+                "extra_rotate_x_deg": float(args.extra_rotate_x_deg),
                 "hit_rate": summary["global_hit_rate"],
                 "points_used_total": summary["points_used_total"],
                 "hits_total": summary["hits_total"],

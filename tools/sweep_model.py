@@ -25,6 +25,7 @@ def build_run_name(
     geodesic_kde_radius_scale: float | None = None,
     extra_rotate_x_deg: float = 0.0,
     recenter_to_bbox_center: bool = False,
+    override_fov_deg: float | None = None,
 ) -> str:
     parts = [
         f"fa-{frame_alignment}",
@@ -35,6 +36,8 @@ def build_run_name(
         parts.append("bbox-center")
     if abs(float(extra_rotate_x_deg)) > 1e-12:
         parts.append(f"rx-{_fmt_float(float(extra_rotate_x_deg))}")
+    if override_fov_deg is not None:
+        parts.append(f"fov-{_fmt_float(float(override_fov_deg))}")
     if smoothing_mode == "diffusion":
         parts.append(f"steps-{int(smoothing_steps or 0)}")
         parts.append(f"alpha-{_fmt_float(float(smoothing_alpha or 0.0))}")
@@ -63,6 +66,7 @@ def main() -> None:
     parser.add_argument("--geodesic-kde-radius-scales", nargs="+", type=float, default=[3.0])
     parser.add_argument("--extra-rotate-x-deg", type=float, default=0.0)
     parser.add_argument("--recenter-to-bbox-center", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--override-fov-deg", type=float, default=None)
     parser.add_argument("--participant-ids", nargs="+", type=int, default=None)
     parser.add_argument("--ray-batch-size", type=int, default=128)
     parser.add_argument("--precompute-all-frames", action=argparse.BooleanOptionalAction, default=True)
@@ -142,6 +146,7 @@ def main() -> None:
             geodesic_kde_radius_scale=None if radius_scale is None else float(radius_scale),
             extra_rotate_x_deg=float(args.extra_rotate_x_deg),
             recenter_to_bbox_center=bool(args.recenter_to_bbox_center),
+            override_fov_deg=None if args.override_fov_deg is None else float(args.override_fov_deg),
         )
         run_root = output_root / run_name
         model_output_dir = run_root / args.model
@@ -174,6 +179,8 @@ def main() -> None:
                 "--mapping-json",
                 str(output_root / "meshmamba_non_texture_name_mapping.json"),
             ]
+            if args.override_fov_deg is not None:
+                cmd += ["--override-fov-deg", str(float(args.override_fov_deg))]
 
             if smoothing_mode == "diffusion":
                 cmd += ["--smoothing-steps", str(int(smoothing_steps))]
@@ -219,6 +226,7 @@ def main() -> None:
                         "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
                         "extra_rotate_x_deg": float(args.extra_rotate_x_deg),
                         "recenter_to_bbox_center": bool(args.recenter_to_bbox_center),
+                        "override_fov_deg": None if args.override_fov_deg is None else float(args.override_fov_deg),
                     }
                 )
                 continue
@@ -241,6 +249,7 @@ def main() -> None:
                 "participant_ids": None if args.participant_ids is None else ",".join(map(str, args.participant_ids)),
                 "extra_rotate_x_deg": float(args.extra_rotate_x_deg),
                 "recenter_to_bbox_center": bool(args.recenter_to_bbox_center),
+                "override_fov_deg": None if args.override_fov_deg is None else float(args.override_fov_deg),
                 "hit_rate": summary["global_hit_rate"],
                 "points_used_total": summary["points_used_total"],
                 "hits_total": summary["hits_total"],

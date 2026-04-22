@@ -259,6 +259,10 @@ def main() -> None:
                 "MSE": agg["MSE"],
                 "Spearman": agg["Spearman"],
                 "Cosine": agg["Cosine"],
+                "MeshMamba_CC": agg.get("MeshMamba_CC"),
+                "MeshMamba_SIM": agg.get("MeshMamba_SIM"),
+                "MeshMamba_KLD": agg.get("MeshMamba_KLD"),
+                "MeshMamba_MSE_raw": agg.get("MeshMamba_MSE_raw"),
                 "output_dir": summary["output_dir"],
             }
         )
